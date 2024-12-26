@@ -390,15 +390,15 @@ void deactivate_source_output_video_texture(obs_source_t *obs_source)
 	obs_source_output_video(obs_source, NULL);
 }
 
-// void ndi_source_thread_process_audio2(ndi_source_config_t *config,
-// 				      NDIlib_audio_frame_v2_t *ndi_audio_frame2,
-// 				      obs_source_t *obs_source,
-// 				      obs_source_audio *obs_audio_frame);
+void ndi_source_thread_process_audio2(ndi_source_config_t *config,
+				      NDIlib_audio_frame_v2_t *ndi_audio_frame2,
+				      obs_source_t *obs_source,
+				      obs_source_audio *obs_audio_frame);
 
-// void ndi_source_thread_process_audio3(ndi_source_config_t *config,
-// 				      NDIlib_audio_frame_v3_t *ndi_audio_frame3,
-// 				      obs_source_t *obs_source,
-// 				      obs_source_audio *obs_audio_frame);
+void ndi_source_thread_process_audio3(ndi_source_config_t *config,
+				      NDIlib_audio_frame_v3_t *ndi_audio_frame3,
+				      obs_source_t *obs_source,
+				      obs_source_audio *obs_audio_frame);
 
 void ndi_source_thread_process_video2(ndi_source_config_t *config,
 				      NDIlib_video_frame_v2_t *ndi_video_frame2,
@@ -686,10 +686,10 @@ void *ndi_source_thread(void *data)
 			// ndi_frame_sync
 			//
 
-			// //
-			// // AUDIO
-			// //
-			// audio_frame2 = {};
+			//
+			// AUDIO
+			//
+			audio_frame2 = {};
 			// ndiLib->framesync_capture_audio(
 			// 	ndi_frame_sync, &audio_frame2,
 			// 	0, // "Your desired sample rate. 0 for “use source”."
@@ -703,8 +703,8 @@ void *ndi_source_thread(void *data)
 			// 		&s->config, &audio_frame2,
 			// 		s->obs_source, &obs_audio_frame);
 			// }
-			// ndiLib->framesync_free_audio(ndi_frame_sync,
-			// 			     &audio_frame2);
+			ndiLib->framesync_free_audio(ndi_frame_sync,
+						     &audio_frame2);
 
 			//
 			// VIDEO
@@ -736,19 +736,19 @@ void *ndi_source_thread(void *data)
 								 &audio_frame3,
 								 nullptr, 100);
 
-			// if (frame_received == NDIlib_frame_type_audio) {
-			// 	//
-			// 	// AUDIO
-			// 	//
-			// 	//blog(LOG_INFO, "a");//udio_frame");
-			// 	ndi_source_thread_process_audio3(
-			// 		&s->config, &audio_frame3,
-			// 		s->obs_source, &obs_audio_frame);
+			if (frame_received == NDIlib_frame_type_audio) {
+				//
+				// AUDIO
+				//
+				//blog(LOG_INFO, "a");//udio_frame");
+				// ndi_source_thread_process_audio3(
+				// 	&s->config, &audio_frame3,
+				// 	s->obs_source, &obs_audio_frame);
 
-			// 	ndiLib->recv_free_audio_v3(ndi_receiver,
-			// 				   &audio_frame3);
-			// 	continue;
-			// }
+				ndiLib->recv_free_audio_v3(ndi_receiver,
+							   &audio_frame3);
+				continue;
+			}
 
 			if (frame_received == NDIlib_frame_type_video) {
 				//
@@ -805,41 +805,38 @@ void ndi_source_thread_process_audio2(ndi_source_config_t *config,
 				      obs_source_t *obs_source,
 				      obs_source_audio *obs_audio_frame)
 {
-	// skip audio processing
-	return;
+	if (!config->audio_enabled) {
+		return;
+	}
 
-	// if (!config->audio_enabled) {
-	// 	return;
-	// }
+	const int channelCount = ndi_audio_frame2->no_channels > 8
+					 ? 8
+					 : ndi_audio_frame2->no_channels;
 
-	// const int channelCount = ndi_audio_frame2->no_channels > 8
-	// 				 ? 8
-	// 				 : ndi_audio_frame2->no_channels;
+	obs_audio_frame->speakers = channel_count_to_layout(channelCount);
 
-	// obs_audio_frame->speakers = channel_count_to_layout(channelCount);
+	switch (config->sync_mode) {
+	case PROP_SYNC_NDI_TIMESTAMP:
+		obs_audio_frame->timestamp =
+			(uint64_t)(ndi_audio_frame2->timestamp * 100);
+		break;
 
-	// switch (config->sync_mode) {
-	// case PROP_SYNC_NDI_TIMESTAMP:
-	// 	obs_audio_frame->timestamp =
-	// 		(uint64_t)(ndi_audio_frame2->timestamp * 100);
-	// 	break;
+	case PROP_SYNC_NDI_SOURCE_TIMECODE:
+		obs_audio_frame->timestamp =
+			(uint64_t)(ndi_audio_frame2->timecode * 100);
+		break;
+	}
 
-	// case PROP_SYNC_NDI_SOURCE_TIMECODE:
-	// 	obs_audio_frame->timestamp =
-	// 		(uint64_t)(ndi_audio_frame2->timecode * 100);
-	// 	break;
-	// }
+	obs_audio_frame->samples_per_sec = ndi_audio_frame2->sample_rate;
+	obs_audio_frame->format = AUDIO_FORMAT_FLOAT_PLANAR;
+	obs_audio_frame->frames = ndi_audio_frame2->no_samples;
+	for (int i = 0; i < channelCount; ++i) {
+		obs_audio_frame->data[i] =
+			(uint8_t *)ndi_audio_frame2->p_data +
+			(i * ndi_audio_frame2->channel_stride_in_bytes);
+	}
 
-	// obs_audio_frame->samples_per_sec = ndi_audio_frame2->sample_rate;
-	// obs_audio_frame->format = AUDIO_FORMAT_FLOAT_PLANAR;
-	// obs_audio_frame->frames = ndi_audio_frame2->no_samples;
-	// for (int i = 0; i < channelCount; ++i) {
-	// 	obs_audio_frame->data[i] =
-	// 		(uint8_t *)ndi_audio_frame2->p_data +
-	// 		(i * ndi_audio_frame2->channel_stride_in_bytes);
-	// }
-
-	// obs_source_output_audio(obs_source, obs_audio_frame);
+	obs_source_output_audio(obs_source, obs_audio_frame);
 }
 
 void ndi_source_thread_process_audio3(ndi_source_config_t *config,
@@ -847,41 +844,38 @@ void ndi_source_thread_process_audio3(ndi_source_config_t *config,
 				      obs_source_t *obs_source,
 				      obs_source_audio *obs_audio_frame)
 {
-	// skip audio processing
-	return;
+	if (!config->audio_enabled) {
+		return;
+	}
 
-	// if (!config->audio_enabled) {
-	// 	return;
-	// }
+	const int channelCount = ndi_audio_frame3->no_channels > 8
+					 ? 8
+					 : ndi_audio_frame3->no_channels;
 
-	// const int channelCount = ndi_audio_frame3->no_channels > 8
-	// 				 ? 8
-	// 				 : ndi_audio_frame3->no_channels;
+	obs_audio_frame->speakers = channel_count_to_layout(channelCount);
 
-	// obs_audio_frame->speakers = channel_count_to_layout(channelCount);
+	switch (config->sync_mode) {
+	case PROP_SYNC_NDI_TIMESTAMP:
+		obs_audio_frame->timestamp =
+			(uint64_t)(ndi_audio_frame3->timestamp * 100);
+		break;
 
-	// switch (config->sync_mode) {
-	// case PROP_SYNC_NDI_TIMESTAMP:
-	// 	obs_audio_frame->timestamp =
-	// 		(uint64_t)(ndi_audio_frame3->timestamp * 100);
-	// 	break;
+	case PROP_SYNC_NDI_SOURCE_TIMECODE:
+		obs_audio_frame->timestamp =
+			(uint64_t)(ndi_audio_frame3->timecode * 100);
+		break;
+	}
 
-	// case PROP_SYNC_NDI_SOURCE_TIMECODE:
-	// 	obs_audio_frame->timestamp =
-	// 		(uint64_t)(ndi_audio_frame3->timecode * 100);
-	// 	break;
-	// }
+	obs_audio_frame->samples_per_sec = ndi_audio_frame3->sample_rate;
+	obs_audio_frame->format = AUDIO_FORMAT_FLOAT_PLANAR;
+	obs_audio_frame->frames = ndi_audio_frame3->no_samples;
+	for (int i = 0; i < channelCount; ++i) {
+		obs_audio_frame->data[i] =
+			(uint8_t *)ndi_audio_frame3->p_data +
+			(i * ndi_audio_frame3->channel_stride_in_bytes);
+	}
 
-	// obs_audio_frame->samples_per_sec = ndi_audio_frame3->sample_rate;
-	// obs_audio_frame->format = AUDIO_FORMAT_FLOAT_PLANAR;
-	// obs_audio_frame->frames = ndi_audio_frame3->no_samples;
-	// for (int i = 0; i < channelCount; ++i) {
-	// 	obs_audio_frame->data[i] =
-	// 		(uint8_t *)ndi_audio_frame3->p_data +
-	// 		(i * ndi_audio_frame3->channel_stride_in_bytes);
-	// }
-
-	// obs_source_output_audio(obs_source, obs_audio_frame);
+	obs_source_output_audio(obs_source, obs_audio_frame);
 }
 
 void ndi_source_thread_process_video2(ndi_source_config_t *config,
