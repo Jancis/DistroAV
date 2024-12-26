@@ -686,25 +686,25 @@ void *ndi_source_thread(void *data)
 			// ndi_frame_sync
 			//
 
-			//
-			// AUDIO
-			//
-			audio_frame2 = {};
-			ndiLib->framesync_capture_audio(
-				ndi_frame_sync, &audio_frame2,
-				0, // "Your desired sample rate. 0 for “use source”."
-				0, // "Your desired channel count. 0 for “use source”."
-				1024);
-			if (audio_frame2.p_data &&
-			    (audio_frame2.timestamp > timestamp_audio)) {
-				//blog(LOG_INFO, "a");//udio_frame");
-				timestamp_audio = audio_frame2.timestamp;
-				ndi_source_thread_process_audio2(
-					&s->config, &audio_frame2,
-					s->obs_source, &obs_audio_frame);
-			}
-			ndiLib->framesync_free_audio(ndi_frame_sync,
-						     &audio_frame2);
+			// //
+			// // AUDIO
+			// //
+			// audio_frame2 = {};
+			// ndiLib->framesync_capture_audio(
+			// 	ndi_frame_sync, &audio_frame2,
+			// 	0, // "Your desired sample rate. 0 for “use source”."
+			// 	0, // "Your desired channel count. 0 for “use source”."
+			// 	1024);
+			// if (audio_frame2.p_data &&
+			//     (audio_frame2.timestamp > timestamp_audio)) {
+			// 	//blog(LOG_INFO, "a");//udio_frame");
+			// 	timestamp_audio = audio_frame2.timestamp;
+			// 	ndi_source_thread_process_audio2(
+			// 		&s->config, &audio_frame2,
+			// 		s->obs_source, &obs_audio_frame);
+			// }
+			// ndiLib->framesync_free_audio(ndi_frame_sync,
+			// 			     &audio_frame2);
 
 			//
 			// VIDEO
@@ -736,19 +736,19 @@ void *ndi_source_thread(void *data)
 								 &audio_frame3,
 								 nullptr, 100);
 
-			if (frame_received == NDIlib_frame_type_audio) {
-				//
-				// AUDIO
-				//
-				//blog(LOG_INFO, "a");//udio_frame");
-				ndi_source_thread_process_audio3(
-					&s->config, &audio_frame3,
-					s->obs_source, &obs_audio_frame);
+			// if (frame_received == NDIlib_frame_type_audio) {
+			// 	//
+			// 	// AUDIO
+			// 	//
+			// 	//blog(LOG_INFO, "a");//udio_frame");
+			// 	ndi_source_thread_process_audio3(
+			// 		&s->config, &audio_frame3,
+			// 		s->obs_source, &obs_audio_frame);
 
-				ndiLib->recv_free_audio_v3(ndi_receiver,
-							   &audio_frame3);
-				continue;
-			}
+			// 	ndiLib->recv_free_audio_v3(ndi_receiver,
+			// 				   &audio_frame3);
+			// 	continue;
+			// }
 
 			if (frame_received == NDIlib_frame_type_video) {
 				//
@@ -805,6 +805,9 @@ void ndi_source_thread_process_audio2(ndi_source_config_t *config,
 				      obs_source_t *obs_source,
 				      obs_source_audio *obs_audio_frame)
 {
+	// skip audio processing
+	return;
+
 	if (!config->audio_enabled) {
 		return;
 	}
@@ -844,6 +847,9 @@ void ndi_source_thread_process_audio3(ndi_source_config_t *config,
 				      obs_source_t *obs_source,
 				      obs_source_audio *obs_audio_frame)
 {
+	// skip audio processing
+	return;
+
 	if (!config->audio_enabled) {
 		return;
 	}
